@@ -406,6 +406,7 @@ if __name__ == '__main__':
                 kan_model = get_simple_conv_model(num_classes, input_channels)
             else:
                 kan_model = get_8simple_conv_model(num_classes, input_channels)
-            train_and_validate(kan_model, bs, epochs=150,
+            train_and_validate(kan_model, bs, epochs=5,
                                dataset_name=dataset_name,
                                model_save_dir=folder_to_save)  # Call the function to train and evaluate the model
+            
