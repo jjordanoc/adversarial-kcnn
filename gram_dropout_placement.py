@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.nn.functional import conv2d
 
 from kans import KAGN
-from mnist_conv import train_and_validate
+from main import train_and_validate
 from utils import L1, NoiseInjection
 from models import SimpleMoEConvKAGNBN
 

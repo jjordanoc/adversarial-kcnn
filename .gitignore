@@ -162,3 +162,7 @@ cython_debug/
 data/
 experiments*/
 checkpoints/
+
+
+tmp
+adversarial_experiments/

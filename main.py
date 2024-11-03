@@ -158,7 +158,7 @@ def quantize_and_evaluate(model, val_loader, criterion, save_path):
     return quantized_val_loss / len(val_loader), quantized_val_accuracy / len(val_loader), evaluation_time
 
 
-def train_and_validate(model, bs, epochs=15, dataset_name='MNIST', model_save_dir="./models",
+def train_or_load_and_validate(model, bs, epochs=15, dataset_name='MNIST', model_save_dir="./models",
                        l1_activation_penalty=0.0, l2_activation_penalty=0.0, is_moe=False
                        ):
     # Function to train, validate, quantize the model, and evaluate the quantized model
@@ -218,10 +218,11 @@ def train_and_validate(model, bs, epochs=15, dataset_name='MNIST', model_save_di
         # Load and transform the CIFAR100 validation dataset
         valset = torchvision.datasets.CIFAR100(root="./data", train=False, download=True, transform=transform_test)
         # Create DataLoaders for training and validation datasets
-    trainloader = DataLoader(trainset, batch_size=bs, shuffle=True, num_workers=12)
-    valloader = DataLoader(valset, batch_size=bs, shuffle=False, num_workers=12)
+    trainloader = DataLoader(trainset, batch_size=bs, shuffle=True, num_workers=4)
+    valloader = DataLoader(valset, batch_size=bs, shuffle=False, num_workers=4)
 
     # Determine the appropriate device based on GPU availability
+    print(f'Training with device {"cuda" if torch.cuda.is_available() else "cpu"}')
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)  # Move the model to the selected device
 
@@ -245,14 +246,7 @@ def train_and_validate(model, bs, epochs=15, dataset_name='MNIST', model_save_di
     os.makedirs(model_save_dir, exist_ok=True)
 
     # Save the trained model's state dictionary
-    # torch.save(model.state_dict(), os.path.join(model_save_dir, "original_model.pth"))
-
-    # Quantize and evaluate the quantized model
-    quantized_loss, quantized_accuracy, quantized_time = quantize_and_evaluate(model, valloader, criterion,
-                                                                               os.path.join(model_save_dir,
-                                                                                            "quantized_model.pth"))
-    print(
-        f"Quantized Model - Validation Loss: {quantized_loss:.4f}, Validation Accuracy: {quantized_accuracy:.4f}, Evaluation Time: {quantized_time:.4f} seconds")
+    torch.save(model.state_dict(), os.path.join(model_save_dir, "original_model.pth"))
 
     # Evaluate the time taken to evaluate the original model
     model.eval().to(device)
@@ -269,7 +263,6 @@ def train_and_validate(model, bs, epochs=15, dataset_name='MNIST', model_save_di
     print(f"Train Accuracies: {train_accuracies}")
     print(f"Validation Accuracies: {val_accuracies}")
     report = {"Validation Accuracies": val_accuracies, 'Train Accuracies': train_accuracies,
-              "Validation Accuracy - q": quantized_accuracy, 'Evaluation Time - q': quantized_time,
               'Evaluation Time': original_time, 'Parameters': count_parameters(model)}
     with open(os.path.join(model_save_dir, 'report.json'), 'w') as f:
         json.dump(report, f)
@@ -373,8 +366,8 @@ if __name__ == '__main__':
         #     for model_name in ['WavKAN8', 'KAN', "KALN", "FastKAN", 'KACN', 'KAGN', 'WavKAN', "Vanilla",
         #                        'KAN8', "KALN8", "FastKAN8", "KACN8", 'KAGN8', "Vanilla8"]:
         #         for dataset_name in ['MNIST', 'CIFAR10', 'CIFAR100']:
-        for model_name in ['KACN', ]:
-            folder_to_save = os.path.join('experiments_v3', '_'.join([model_name.lower(), dataset_name.lower()]))
+        for model_name in ['Vanilla', 'KAGN', ]:
+            folder_to_save = os.path.join('adversarial_experiments', '_'.join([model_name.lower(), dataset_name.lower()]))
             num_classes = 100 if dataset_name == 'CIFAR100' else 10
             input_channels = 1 if dataset_name == 'MNIST' else 3
             bs = 64 if model_name in ['WavKAN', 'WavKAN8'] else 128
@@ -406,7 +399,7 @@ if __name__ == '__main__':
                 kan_model = get_simple_conv_model(num_classes, input_channels)
             else:
                 kan_model = get_8simple_conv_model(num_classes, input_channels)
-            train_and_validate(kan_model, bs, epochs=5,
+            train_and_validate(kan_model, bs, epochs=1,
                                dataset_name=dataset_name,
                                model_save_dir=folder_to_save)  # Call the function to train and evaluate the model
             
